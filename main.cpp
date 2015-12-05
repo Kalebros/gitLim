@@ -19,6 +19,9 @@
 #include <QCoreApplication>
 #include <QDebug>
 #include <QTextStream>
+#include <QCommandLineOption>
+#include <QCommandLineParser>
+#include <QSettings>
 
 #include "gitlim.h"
 
@@ -26,9 +29,40 @@ int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
 
+    //PARSER
+    QCommandLineParser parser;
+
+    parser.setApplicationDescription("Check for files' size limits, as in GitHub's 100MiB size limit; use it before make a commit");
+    parser.addHelpOption();
+
+    QCommandLineOption workingDirectory("d",QObject::tr("Set repository directory"),QObject::tr("Repository absolute path,using / as in Unix Syntax"));
+    parser.addOption(workingDirectory);
+
+    QCommandLineOption gitPath(QStringList() << "p" << "path",QObject::tr("Set GIT path"),QObject::tr("GIT absolute path, using / as in Unix syntax"));
+    parser.addOption(gitPath);
+
+    parser.process(a);
+
+    if(parser.isSet(gitPath)) {
+        QString path=parser.value(gitPath);
+        path=path.replace(QStringLiteral("/"),QString("\\"));
+        QSettings settings(QStringLiteral("ARM"),QStringLiteral("gitlim"));
+        settings.setValue(QStringLiteral("gitPath"),path);
+    }
+
+    QSettings settings(QStringLiteral("ARM"),QStringLiteral("gitLim"));
+    QString gPath=settings.value(QStringLiteral("gitPath"),QStringLiteral("C:\\Program Files (x86)\\Git\\bin")).toString();
+    QString wDirectory;
+    if(!parser.isSet(workingDirectory))
+        wDirectory.clear();
+    else {
+        wDirectory=parser.value(workingDirectory);
+        if(!wDirectory.endsWith('/')) wDirectory=wDirectory.append('/');
+    }
+
     GitLim gitLimiter(&a,new QTextStream(stdout));
-    gitLimiter.setGitPath(QStringLiteral("C:\\Program Files (x86)\\Git\\bin"));
-    gitLimiter.setWorkingDirectory(QStringLiteral("C:/Users/Bardo/Workbench/Qt/Git-Lim/"));
+    gitLimiter.setGitPath(gPath);
+    gitLimiter.setWorkingDirectory(wDirectory);
 
     gitLimiter.prepareEnvironment();
     QObject::connect(&gitLimiter,SIGNAL(finished()),&a,SLOT(quit()));

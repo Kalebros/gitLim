@@ -8,7 +8,7 @@ QT       += core
 
 QT       -= gui
 
-TARGET = Git-Lim
+TARGET = GitLim
 CONFIG   += console
 CONFIG   -= app_bundle
 
